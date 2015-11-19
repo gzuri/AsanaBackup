@@ -19,11 +19,13 @@ namespace BackupAsana
     {
         string userToken;
         string baseDirectory;
+        bool overrideExistingFiles;
 
-        public AsanaBackup(string userAuthToken, string _baseDirectory)
+        public AsanaBackup(string userAuthToken, string _baseDirectory, bool _overrideExistingFiles)
         {
             this.userToken = "Bearer " +  userAuthToken;
             baseDirectory = _baseDirectory;
+            this.overrideExistingFiles = _overrideExistingFiles;
             if (!Directory.Exists(baseDirectory))
                 Directory.CreateDirectory(baseDirectory);
         }
@@ -105,6 +107,13 @@ namespace BackupAsana
 
         async Task BackupProjectAsync(long projectID, string name)
         {
+            var projectBackupPath = Path.Combine(baseDirectory, projectID.ToString() + ".json");
+            if (File.Exists(projectBackupPath))
+                if (overrideExistingFiles)
+                    File.Delete(projectBackupPath);
+                else
+                    return;
+
             var timer = Stopwatch.StartNew();
             Console.WriteLine("Backing up projct: {0}", name);
             var project = new ProjectDTO
@@ -115,13 +124,8 @@ namespace BackupAsana
 
             project.Tasks = await GetTasksForProjectAsync(projectID);
             
-
             var backupDataSerialized = JsonConvert.SerializeObject(project);
-            var projectBackupPath = Path.Combine(baseDirectory, projectID.ToString() + ".json");
-
-            if (File.Exists(projectBackupPath))
-                File.Delete(projectBackupPath);
-
+            
             File.WriteAllText(projectBackupPath, backupDataSerialized);
 
             Console.WriteLine("Project backuped in: {0}", timer.Elapsed);

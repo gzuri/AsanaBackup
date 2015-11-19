@@ -22,6 +22,11 @@ namespace BackupAsana
               HelpText = "Asana workspace")]
             public long WorkspaceID { get; set; }
 
+
+            [Option('c', "continue", Required = false,
+              HelpText = "Continue on next project")]
+            public bool Continue { get; set; }
+
             [Option('p', "path", Required = true,
               HelpText = "Directory path for download")]
             public string Path { get; set; }
@@ -42,7 +47,6 @@ namespace BackupAsana
             var options = new Options();
             if (CommandLine.Parser.Default.ParseArguments(args, options))
             {
-
                 var timer = new Stopwatch();
                 timer.Start();
 
@@ -50,7 +54,7 @@ namespace BackupAsana
 
                 Task.Run(async () =>
                 {
-                    var asanaBackup = new AsanaBackup(options.AsanaToken, options.Path);
+                    var asanaBackup = new AsanaBackup(options.AsanaToken, options.Path, !options.Continue);
                     await asanaBackup.BackupProjects(options.WorkspaceID);
                 }).Wait();
 
