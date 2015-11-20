@@ -59,6 +59,8 @@ namespace BackupAsana
                             };
                         }
                     }
+                    Console.WriteLine("Status code {0} on URL: {1}", response.StatusCode, url);
+
                     return new MakeWebRequestResDTO
                     {
                         StatusCode = (int)response.StatusCode
@@ -81,11 +83,14 @@ namespace BackupAsana
 
         public async Task BackupProjects(long? workspaceID)
         {
-            var url = "https://app.asana.com/api/1.0/projects/";
+            var projectsUrl = "https://app.asana.com/api/1.0/projects/";
+            var usersUrl = "https://app.asana.com/api/1.0/users";
             if (workspaceID.HasValue)
-                url = url.AddQueryParam("workspace", workspaceID.ToString());
-
-            var projectsResponse = await MakeWebRequestAsync(url);
+            {
+                projectsUrl = projectsUrl.AddQueryParam("workspace", workspaceID.ToString());
+                usersUrl = SimplHelpers.UrlHelper.Combine("https://app.asana.com/api/1.0/workspaces/", workspaceID.Value.ToString(), "users");
+            }
+            var projectsResponse = await MakeWebRequestAsync(projectsUrl);
 
             if (projectsResponse.StatusCode != 200)
                 return;
@@ -96,6 +101,17 @@ namespace BackupAsana
                 File.Delete(projectsFilePath);
 
             File.WriteAllText(projectsFilePath, projectsResponse.Content);
+
+            var usersResponse = await MakeWebRequestAsync(usersUrl);
+            if (usersResponse.StatusCode != 200)
+                return;
+
+            //Backup users
+            var usersFilePath = Path.Combine(baseDirectory, "users.json");
+            if (File.Exists(usersFilePath))
+                File.Delete(usersFilePath);
+
+            File.WriteAllText(usersFilePath, usersResponse.Content);
 
             var projects = JsonConvert.DeserializeObject<IdNameValuesHolder>(projectsResponse.Content);
 
